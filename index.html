@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SpotThat — The Car ID Game</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a0f;--surface:#14141f;--surface2:#1e1e2e;--surface3:#282840;
+  --accent:#6c5ce7;--accent2:#a29bfe;--accent-glow:rgba(108,92,231,.25);
+  --green:#00b894;--yellow:#fdcb6e;--red:#e17055;--orange:#e67e22;
+  --text:#e8e8f0;--text2:#a0a0b8;--text3:#6c6c82;
+  --radius:12px;--radius-sm:8px;
+}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+.container{max-width:720px;margin:0 auto;padding:16px}
+h1,h2,h3{font-weight:700}
+button{cursor:pointer;border:none;font-family:inherit;font-size:inherit;transition:all .2s}
+input,select{font-family:inherit;font-size:inherit}
+.hidden{display:none!important}
+
+/* HEADER */
+.header{text-align:center;padding:24px 0 8px}
+.logo{font-size:2rem;font-weight:900;letter-spacing:-1px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.tagline{color:var(--text2);font-size:.85rem;margin-top:2px}
+
+/* NAV TABS */
+.nav{display:flex;gap:4px;justify-content:center;margin:20px 0;background:var(--surface);border-radius:var(--radius);padding:4px}
+.nav button{flex:1;padding:10px 8px;border-radius:var(--radius-sm);background:transparent;color:var(--text2);font-weight:600;font-size:.85rem}
+.nav button.active{background:var(--accent);color:#fff}
+.nav button:hover:not(.active){background:var(--surface2)}
+
+/* HOME SCREEN */
+.home-hero{text-align:center;padding:40px 0 20px}
+.home-hero h2{font-size:1.5rem;margin-bottom:8px}
+.home-hero p{color:var(--text2);max-width:400px;margin:0 auto 24px;font-size:.95rem;line-height:1.5}
+.mode-cards{display:grid;gap:12px;margin-bottom:24px}
+.mode-card{background:var(--surface);border:1px solid var(--surface3);border-radius:var(--radius);padding:20px;text-align:left;transition:all .2s}
+.mode-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 24px var(--accent-glow)}
+.mode-card h3{font-size:1.1rem;margin-bottom:4px}
+.mode-card p{color:var(--text2);font-size:.85rem}
+.mode-card .badge{display:inline-block;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:20px;margin-bottom:8px}
+.badge-daily{background:var(--green);color:#000}
+.badge-classic{background:var(--accent);color:#fff}
+.badge-blitz{background:var(--orange);color:#fff}
+
+/* GAME SCREEN */
+.game-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.game-top .round-info{font-weight:700;font-size:1rem}
+.game-top .score-display{font-size:.9rem;color:var(--accent2)}
+.timer-bar{height:4px;background:var(--surface2);border-radius:2px;margin-bottom:16px;overflow:hidden}
+.timer-bar .fill{height:100%;background:var(--accent);border-radius:2px;transition:width .1s linear}
+.car-image-wrapper{position:relative;width:100%;aspect-ratio:16/10;background:var(--surface);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;border:1px solid var(--surface3)}
+.car-image-wrapper img{width:100%;height:100%;object-fit:cover}
+.car-image-wrapper .img-placeholder{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--text3);font-size:.9rem}
+.hint-btn{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.7);color:var(--text);padding:6px 12px;border-radius:20px;font-size:.75rem;font-weight:600;backdrop-filter:blur(8px)}
+.hint-btn:hover{background:rgba(108,92,231,.7)}
+
+.guess-form{display:grid;gap:10px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:.75rem;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.form-group input,.form-group select{padding:10px 12px;background:var(--surface);border:1px solid var(--surface3);border-radius:var(--radius-sm);color:var(--text);font-size:.95rem;outline:none;transition:border .2s}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.form-group select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23a0a0b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.form-group select option{background:var(--surface);color:var(--text)}
+
+.submit-row{display:flex;gap:10px;margin-top:4px}
+.btn-submit{flex:1;padding:12px;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-weight:700;font-size:1rem}
+.btn-submit:hover{background:#7c6cf0}
+.btn-submit:disabled{opacity:.5;cursor:not-allowed}
+.btn-skip{padding:12px 20px;border-radius:var(--radius-sm);background:var(--surface2);color:var(--text2);font-weight:600;font-size:.9rem}
+.btn-skip:hover{background:var(--surface3)}
+
+/* RESULT OVERLAY */
+.result-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px);animation:fadeIn .3s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.result-card{background:var(--surface);border-radius:var(--radius);padding:28px;max-width:400px;width:90%;text-align:center}
+.result-card h3{font-size:1.3rem;margin-bottom:12px}
+.result-card .pts{font-size:2.5rem;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:8px 0}
+.result-detail{text-align:left;margin:16px 0;background:var(--surface2);border-radius:var(--radius-sm);padding:12px}
+.result-detail .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--surface3);font-size:.9rem}
+.result-detail .row:last-child{border:none}
+.result-detail .correct{color:var(--green)}
+.result-detail .wrong{color:var(--red)}
+.result-detail .label{color:var(--text2)}
+.btn-next{width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-weight:700;font-size:1rem;margin-top:8px}
+.btn-next:hover{background:#7c6cf0}
+
+/* GAME OVER */
+.gameover{text-align:center;padding:40px 0}
+.gameover h2{font-size:1.6rem;margin-bottom:4px}
+.gameover .final-score{font-size:3rem;font-weight:900;background:linear-gradient(135deg,var(--green),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:12px 0}
+.gameover .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:20px 0}
+.gameover .stat{background:var(--surface);border-radius:var(--radius-sm);padding:14px 8px}
+.gameover .stat .val{font-size:1.4rem;font-weight:800}
+.gameover .stat .lbl{font-size:.7rem;color:var(--text2);text-transform:uppercase;margin-top:2px}
+.gameover .breakdown{text-align:left;background:var(--surface);border-radius:var(--radius);padding:16px;margin:16px 0;max-height:300px;overflow-y:auto}
+.gameover .breakdown h4{margin-bottom:10px;font-size:.9rem;color:var(--text2)}
+.breakdown-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--surface2);font-size:.85rem}
+.breakdown-item:last-child{border:none}
+.breakdown-item .car-name{flex:1}
+.breakdown-item .pts-earned{font-weight:700;color:var(--accent2)}
+.btn-again{padding:14px 32px;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-weight:700;font-size:1rem;margin-top:16px}
+.btn-again:hover{background:#7c6cf0}
+
+/* LEADERBOARD */
+.leaderboard{padding:20px 0}
+.leaderboard h2{text-align:center;margin-bottom:16px}
+.lb-tabs{display:flex;gap:4px;margin-bottom:16px;background:var(--surface);border-radius:var(--radius-sm);padding:3px}
+.lb-tabs button{flex:1;padding:8px;border-radius:6px;background:transparent;color:var(--text2);font-size:.8rem;font-weight:600}
+.lb-tabs button.active{background:var(--accent);color:#fff}
+.lb-table{width:100%}
+.lb-row{display:flex;align-items:center;padding:12px;background:var(--surface);border-radius:var(--radius-sm);margin-bottom:6px}
+.lb-row.gold{background:linear-gradient(135deg,rgba(253,203,110,.1),rgba(253,203,110,.05));border:1px solid rgba(253,203,110,.3)}
+.lb-row.silver{background:linear-gradient(135deg,rgba(200,200,220,.08),rgba(200,200,220,.03));border:1px solid rgba(200,200,220,.2)}
+.lb-row.bronze{background:linear-gradient(135deg,rgba(225,112,85,.08),rgba(225,112,85,.03));border:1px solid rgba(225,112,85,.2)}
+.lb-rank{width:32px;text-align:center;font-weight:800;font-size:1rem}
+.lb-name{flex:1;font-weight:600;margin-left:12px}
+.lb-score{font-weight:700;color:var(--accent2)}
+.lb-empty{text-align:center;padding:40px;color:var(--text3)}
+
+/* DAILY BANNER */
+.daily-banner{background:linear-gradient(135deg,rgba(0,184,148,.15),rgba(108,92,231,.15));border:1px solid rgba(0,184,148,.3);border-radius:var(--radius);padding:16px;margin-bottom:16px;text-align:center}
+.daily-banner h3{color:var(--green);font-size:.95rem}
+.daily-banner p{color:var(--text2);font-size:.8rem;margin-top:2px}
+
+/* DIFFICULTY SELECTOR */
+.difficulty-row{display:flex;gap:8px;justify-content:center;margin:12px 0}
+.diff-btn{padding:8px 16px;border-radius:20px;background:var(--surface);color:var(--text2);font-size:.8rem;font-weight:600;border:1px solid var(--surface3)}
+.diff-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.diff-btn:hover:not(.active){border-color:var(--accent)}
+
+/* AUTOCOMPLETE */
+.autocomplete-wrapper{position:relative}
+.autocomplete-list{position:absolute;top:100%;left:0;right:0;background:var(--surface2);border:1px solid var(--surface3);border-radius:var(--radius-sm);max-height:180px;overflow-y:auto;z-index:50;display:none}
+.autocomplete-list.show{display:block}
+.autocomplete-item{padding:8px 12px;cursor:pointer;font-size:.9rem}
+.autocomplete-item:hover,.autocomplete-item.highlighted{background:var(--accent);color:#fff}
+
+/* STREAK */
+.streak-display{display:inline-flex;align-items:center;gap:4px;font-size:.85rem;color:var(--yellow)}
+
+/* RESPONSIVE */
+@media(max-width:480px){
+  .form-row{grid-template-columns:1fr}
+  .gameover .stat-grid{grid-template-columns:repeat(2,1fr)}
+  .logo{font-size:1.5rem}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">SpotThat</div>
+  <div class="tagline">The Car Identification Game</div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <button class="active" data-tab="home">Home</button>
+  <button data-tab="game">Play</button>
+  <button data-tab="leaderboard">Ranks</button>
+</div>
+
+<!-- HOME TAB -->
+<div id="tab-home">
+  <div class="home-hero">
+    <h2>Can you ID the ride?</h2>
+    <p>Test your automotive knowledge. Guess the make, model, year, and trim of real cars from photos.</p>
+  </div>
+  <div class="mode-cards">
+    <button class="mode-card" onclick="startGame('daily')">
+      <span class="badge badge-daily">DAILY CHALLENGE</span>
+      <h3>Daily SpotThat</h3>
+      <p>One car. Same for everyone. Share your score.</p>
+    </button>
+    <button class="mode-card" onclick="startGame('classic')">
+      <span class="badge badge-classic">10 ROUNDS</span>
+      <h3>Classic Mode</h3>
+      <p>10 random cars. No timer. Prove your expertise.</p>
+    </button>
+    <button class="mode-card" onclick="startGame('blitz')">
+      <span class="badge badge-blitz">TIMED</span>
+      <h3>Blitz Mode</h3>
+      <p>30 seconds per car. How fast can you ID?</p>
+    </button>
+  </div>
+</div>
+
+<!-- GAME TAB -->
+<div id="tab-game" class="hidden">
+  <div id="game-active">
+    <div class="daily-banner hidden" id="daily-banner">
+      <h3>Daily Challenge — <span id="daily-date"></span></h3>
+      <p>Everyone gets the same car. One shot.</p>
+    </div>
+    <div class="game-top">
+      <span class="round-info">Round <span id="round-num">1</span> / <span id="round-total">10</span></span>
+      <span class="score-display">Score: <span id="current-score">0</span> <span class="streak-display hidden" id="streak-display">🔥<span id="streak-count">0</span></span></span>
+    </div>
+    <div class="timer-bar hidden" id="timer-bar"><div class="fill" id="timer-fill"></div></div>
+    <div class="car-image-wrapper">
+      <img id="car-img" src="" alt="Identify this car" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="img-placeholder" style="display:none">Photo loading...</div>
+      <button class="hint-btn" onclick="getHint()">💡 Hint</button>
+    </div>
+    <div class="guess-form">
+      <div class="form-row">
+        <div class="form-group autocomplete-wrapper">
+          <label>Make</label>
+          <input type="text" id="guess-make" placeholder="e.g. Toyota" autocomplete="off">
+          <div class="autocomplete-list" id="ac-make"></div>
+        </div>
+        <div class="form-group autocomplete-wrapper">
+          <label>Model</label>
+          <input type="text" id="guess-model" placeholder="e.g. Camry" autocomplete="off">
+          <div class="autocomplete-list" id="ac-model"></div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Year Range</label>
+          <select id="guess-year">
+            <option value="">Select era...</option>
+            <option value="pre-1970">Pre 1970</option>
+            <option value="1970-1979">1970–1979</option>
+            <option value="1980-1989">1980–1989</option>
+            <option value="1990-1999">1990–1999</option>
+            <option value="2000-2005">2000–2005</option>
+            <option value="2006-2010">2006–2010</option>
+            <option value="2011-2015">2011–2015</option>
+            <option value="2016-2020">2016–2020</option>
+            <option value="2021-2026">2021–2026</option>
+          </select>
+        </div>
+        <div class="form-group autocomplete-wrapper">
+          <label>Trim (Bonus)</label>
+          <input type="text" id="guess-trim" placeholder="e.g. SE, Sport">
+          <div class="autocomplete-list" id="ac-trim"></div>
+        </div>
+      </div>
+      <div class="submit-row">
+        <button class="btn-submit" onclick="submitGuess()">Lock In Answer</button>
+        <button class="btn-skip" onclick="skipRound()">Skip</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULT OVERLAY -->
+  <div class="result-overlay hidden" id="result-overlay">
+    <div class="result-card">
+      <h3 id="result-title"></h3>
+      <div class="pts" id="result-pts"></div>
+      <div class="result-detail" id="result-detail"></div>
+      <button class="btn-next" onclick="nextRound()">Next Car →</button>
+    </div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div id="game-over" class="hidden">
+    <div class="gameover">
+      <h2>Game Over!</h2>
+      <div class="final-score" id="final-score">0</div>
+      <p style="color:var(--text2);margin-bottom:4px">points</p>
+      <div class="stat-grid">
+        <div class="stat"><div class="val" id="stat-correct">0</div><div class="lbl">Correct IDs</div></div>
+        <div class="stat"><div class="val" id="stat-streak">0</div><div class="lbl">Best Streak</div></div>
+        <div class="stat"><div class="val" id="stat-perfect">0</div><div class="lbl">Perfect 4/4</div></div>
+      </div>
+      <div class="breakdown" id="breakdown"></div>
+      <div>
+        <label style="font-size:.8rem;color:var(--text2)">Save your name:</label>
+        <div style="display:flex;gap:8px;margin-top:6px;justify-content:center">
+          <input type="text" id="player-name" placeholder="Your name" style="padding:10px;background:var(--surface);border:1px solid var(--surface3);border-radius:var(--radius-sm);color:var(--text);width:180px;text-align:center">
+          <button class="btn-again" style="margin:0;padding:10px 20px" onclick="saveScore()">Save</button>
+        </div>
+      </div>
+      <button class="btn-again" onclick="goHome()">Play Again</button>
+    </div>
+  </div>
+</div>
+
+<!-- LEADERBOARD TAB -->
+<div id="tab-leaderboard" class="hidden">
+  <div class="leaderboard">
+    <h2>Leaderboard</h2>
+    <div class="lb-tabs">
+      <button class="active" onclick="showLB('classic',this)">Classic</button>
+      <button onclick="showLB('blitz',this)">Blitz</button>
+      <button onclick="showLB('daily',this)">Daily</button>
+    </div>
+    <div id="lb-list"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ============== CAR DATABASE ==============
+const CARS = [
+  {make:"Toyota",model:"Supra",year:"2021-2026",trim:"GR",hints:["Japanese sports car","Inline-6 turbo","BMW Z4 sibling"],img:"https://images.unsplash.com/photo-1611651338412-8403fa6e3599?w=800&q=80"},
+  {make:"Ford",model:"Mustang",year:"2016-2020",trim:"GT",hints:["American muscle","5.0L V8","Pony car icon"],img:"https://images.unsplash.com/photo-1584345604476-8ec5f82d661f?w=800&q=80"},
+  {make:"Porsche",model:"911",year:"2016-2020",trim:"Carrera",hints:["German sports car","Rear-engine layout","Iconic silhouette"],img:"https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=80"},
+  {make:"Tesla",model:"Model 3",year:"2021-2026",trim:"Long Range",hints:["Electric sedan","Minimalist interior","No grille"],img:"https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=800&q=80"},
+  {make:"BMW",model:"M3",year:"2021-2026",trim:"Competition",hints:["German sedan","Twin-turbo I6","Controversial grille"],img:"https://images.unsplash.com/photo-1617531653332-bd46c24f2068?w=800&q=80"},
+  {make:"Chevrolet",model:"Corvette",year:"2021-2026",trim:"Stingray",hints:["Mid-engine layout","American sports car","C8 generation"],img:"https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&q=80"},
+  {make:"Mercedes-Benz",model:"G-Class",year:"2016-2020",trim:"G550",hints:["Boxy SUV","Military origins","Luxury off-roader"],img:"https://images.unsplash.com/photo-1520031441872-265e4ff70366?w=800&q=80"},
+  {make:"Lamborghini",model:"Huracán",year:"2016-2020",trim:"EVO",hints:["Italian supercar","V10 engine","Angular design"],img:"https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80"},
+  {make:"Jeep",model:"Wrangler",year:"2016-2020",trim:"Rubicon",hints:["Removable doors","Off-road icon","Seven-slot grille"],img:"https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800&q=80"},
+  {make:"Audi",model:"R8",year:"2016-2020",trim:"V10",hints:["Mid-engine German","Sideblades design","Iron Man's car"],img:"https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?w=800&q=80"},
+  {make:"Honda",model:"Civic",year:"2021-2026",trim:"Type R",hints:["Japanese compact","Triple exhaust","Big rear wing"],img:"https://images.unsplash.com/photo-1679239872629-c1b6e88e3c6c?w=800&q=80"},
+  {make:"Land Rover",model:"Defender",year:"2021-2026",trim:"110",hints:["British off-roader","Boxy reboot","Alpine windows"],img:"https://images.unsplash.com/photo-1606016159991-dfe4f2746ad5?w=800&q=80"},
+  {make:"Dodge",model:"Challenger",year:"2016-2020",trim:"Hellcat",hints:["Muscle car","Supercharged V8","Retro styling"],img:"https://images.unsplash.com/photo-1612544448445-b8232cff3b6c?w=800&q=80"},
+  {make:"Mazda",model:"MX-5 Miata",year:"2016-2020",trim:"RF",hints:["Lightweight roadster","Retractable fastback","Japanese two-seater"],img:"https://images.unsplash.com/photo-1555215695-3004980ad54e?w=800&q=80"},
+  {make:"Volkswagen",model:"Golf",year:"2021-2026",trim:"GTI",hints:["Hot hatch","German compact","Plaid seats tradition"],img:"https://images.unsplash.com/photo-1619405399517-d7fce0f13302?w=800&q=80"},
+  {make:"Ferrari",model:"488",year:"2016-2020",trim:"GTB",hints:["Italian supercar","Twin-turbo V8","Prancing horse badge"],img:"https://images.unsplash.com/photo-1592198084033-aade902d1aae?w=800&q=80"},
+  {make:"Subaru",model:"WRX",year:"2021-2026",trim:"STI",hints:["Rally heritage","AWD sedan","Hood scoop"],img:"https://images.unsplash.com/photo-1626668893632-6f3a4466d22f?w=800&q=80"},
+  {make:"McLaren",model:"720S",year:"2016-2020",trim:"Performance",hints:["British supercar","Dihedral doors","Eye socket headlights"],img:"https://images.unsplash.com/photo-1621135802920-133df287f89c?w=800&q=80"},
+  {make:"Toyota",model:"Land Cruiser",year:"2021-2026",trim:"300 Series",hints:["Japanese SUV","Off-road legend","Full-size body-on-frame"],img:"https://images.unsplash.com/photo-1594611396730-61e126b0f37e?w=800&q=80"},
+  {make:"Nissan",model:"GT-R",year:"2016-2020",trim:"NISMO",hints:["Godzilla nickname","Twin-turbo V6","AWD supercar killer"],img:"https://images.unsplash.com/photo-1580274455191-1c62238ce452?w=800&q=80"},
+  {make:"Ford",model:"Bronco",year:"2021-2026",trim:"Wildtrak",hints:["Revived nameplate","Removable doors & roof","Jeep competitor"],img:"https://images.unsplash.com/photo-1662832789693-77666fef1d4f?w=800&q=80"},
+  {make:"Chevrolet",model:"Camaro",year:"2016-2020",trim:"ZL1",hints:["American pony car","Supercharged V8","Transformers star"],img:"https://images.unsplash.com/photo-1603553329474-99f95f35ea37?w=800&q=80"},
+  {make:"Aston Martin",model:"Vantage",year:"2016-2020",trim:"V8",hints:["British grand tourer","AMG-sourced engine","James Bond brand"],img:"https://images.unsplash.com/photo-1596468138838-0f34c4e0fbb6?w=800&q=80"},
+  {make:"Rivian",model:"R1T",year:"2021-2026",trim:"Adventure",hints:["Electric pickup","Gear tunnel","Startup truck"],img:"https://images.unsplash.com/photo-1675443435801-dd29e5e2a487?w=800&q=80"},
+  {make:"Hyundai",model:"Ioniq 5",year:"2021-2026",trim:"Limited",hints:["Retro-futuristic EV","Pixel lights","800V charging"],img:"https://images.unsplash.com/photo-1670361725880-f5e819d25ddb?w=800&q=80"},
+  {make:"BMW",model:"M4",year:"2021-2026",trim:"Competition",hints:["German coupe","Large kidney grille","Twin-turbo I6"],img:"https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=800&q=80"},
+  {make:"Porsche",model:"Taycan",year:"2021-2026",trim:"Turbo S",hints:["Electric Porsche","800V architecture","Four-door sports car"],img:"https://images.unsplash.com/photo-1614200187524-dc4b892acf16?w=800&q=80"},
+  {make:"Toyota",model:"GR86",year:"2021-2026",trim:"Premium",hints:["Boxer engine","Rear-wheel drive","Affordable sports car"],img:"https://images.unsplash.com/photo-1669725083498-4f9e6316e490?w=800&q=80"},
+  {make:"Mercedes-Benz",model:"AMG GT",year:"2016-2020",trim:"S",hints:["Long hood, short deck","Twin-turbo V8","Front-mid engine"],img:"https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=800&q=80"},
+  {make:"Ford",model:"F-150",year:"2021-2026",trim:"Raptor",hints:["Best-selling truck","Off-road package","Fox shocks"],img:"https://images.unsplash.com/photo-1605893477799-b99e3b8b93fe?w=800&q=80"}
+];
+
+// All makes/models for autocomplete
+const ALL_MAKES = [...new Set(CARS.map(c=>c.make))].sort();
+const ALL_MODELS = [...new Set(CARS.map(c=>c.model))].sort();
+const ALL_TRIMS = [...new Set(CARS.map(c=>c.trim))].sort();
+
+// ============== GAME STATE ==============
+let state = {
+  mode:'classic', round:0, totalRounds:10, score:0, streak:0, bestStreak:0,
+  perfectCount:0, correctCount:0, cars:[], results:[], hintsUsed:0,
+  timer:null, timeLeft:30, dailySeed:null
+};
+
+// ============== NAVIGATION ==============
+document.querySelectorAll('.nav button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    ['home','game','leaderboard'].forEach(t=>document.getElementById('tab-'+t).classList.add('hidden'));
+    document.getElementById('tab-'+btn.dataset.tab).classList.remove('hidden');
+    if(btn.dataset.tab==='leaderboard') renderLeaderboard('classic');
+  });
+});
+
+function switchTab(tab){
+  document.querySelectorAll('.nav button').forEach(b=>{b.classList.remove('active');if(b.dataset.tab===tab)b.classList.add('active')});
+  ['home','game','leaderboard'].forEach(t=>document.getElementById('tab-'+t).classList.add('hidden'));
+  document.getElementById('tab-'+tab).classList.remove('hidden');
+}
+
+function goHome(){switchTab('home')}
+
+// ============== DAILY SEED ==============
+function getDailySeed(){
+  const d=new Date();return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();
+}
+function seededRandom(seed){
+  let s=seed;return function(){s=Math.sin(s)*10000;return s-Math.floor(s)};
+}
+function shuffleWithSeed(arr,seed){
+  const rng=seededRandom(seed);const a=[...arr];
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;
+}
+
+// ============== START GAME ==============
+function startGame(mode){
+  state.mode=mode;state.round=0;state.score=0;state.streak=0;state.bestStreak=0;
+  state.perfectCount=0;state.correctCount=0;state.results=[];state.hintsUsed=0;
+
+  if(mode==='daily'){
+    state.totalRounds=1;
+    state.dailySeed=getDailySeed();
+    const shuffled=shuffleWithSeed(CARS,state.dailySeed);
+    state.cars=[shuffled[0]];
+    document.getElementById('daily-banner').classList.remove('hidden');
+    document.getElementById('daily-date').textContent=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  } else {
+    state.totalRounds=10;
+    const shuffled=[...CARS].sort(()=>Math.random()-.5);
+    state.cars=shuffled.slice(0,10);
+    document.getElementById('daily-banner').classList.add('hidden');
+  }
+
+  document.getElementById('round-total').textContent=state.totalRounds;
+  document.getElementById('timer-bar').classList.toggle('hidden',mode!=='blitz');
+  switchTab('game');
+  document.getElementById('game-active').classList.remove('hidden');
+  document.getElementById('game-over').classList.add('hidden');
+  document.getElementById('result-overlay').classList.add('hidden');
+  loadRound();
+}
+
+// ============== LOAD ROUND ==============
+function loadRound(){
+  const car=state.cars[state.round];
+  document.getElementById('round-num').textContent=state.round+1;
+  document.getElementById('current-score').textContent=state.score;
+  updateStreak();
+
+  const img=document.getElementById('car-img');
+  img.style.display='block';
+  img.nextElementSibling.style.display='none';
+  img.src=car.img;
+
+  // Reset form
+  document.getElementById('guess-make').value='';
+  document.getElementById('guess-model').value='';
+  document.getElementById('guess-year').value='';
+  document.getElementById('guess-trim').value='';
+  state.hintsUsed=0;
+
+  if(state.mode==='blitz') startTimer();
+}
+
+// ============== TIMER ==============
+function startTimer(){
+  state.timeLeft=30;
+  document.getElementById('timer-fill').style.width='100%';
+  clearInterval(state.timer);
+  state.timer=setInterval(()=>{
+    state.timeLeft-=0.1;
+    document.getElementById('timer-fill').style.width=(state.timeLeft/30*100)+'%';
+    if(state.timeLeft<=10) document.getElementById('timer-fill').style.background=state.timeLeft<=5?'var(--red)':'var(--yellow)';
+    else document.getElementById('timer-fill').style.background='var(--accent)';
+    if(state.timeLeft<=0){clearInterval(state.timer);submitGuess();}
+  },100);
+}
+
+// ============== HINTS ==============
+function getHint(){
+  const car=state.cars[state.round];
+  if(state.hintsUsed>=car.hints.length) return;
+  const hint=car.hints[state.hintsUsed];
+  state.hintsUsed++;
+  const btn=document.querySelector('.hint-btn');
+  btn.textContent='💡 '+hint;
+  setTimeout(()=>{btn.textContent=state.hintsUsed<car.hints.length?'💡 Hint ('+(car.hints.length-state.hintsUsed)+' left)':'💡 No hints left'},2500);
+}
+
+// ============== SUBMIT GUESS ==============
+function submitGuess(){
+  if(state.timer) clearInterval(state.timer);
+  const car=state.cars[state.round];
+  const gMake=document.getElementById('guess-make').value.trim();
+  const gModel=document.getElementById('guess-model').value.trim();
+  const gYear=document.getElementById('guess-year').value;
+  const gTrim=document.getElementById('guess-trim').value.trim();
+
+  const makeCorrect=gMake.toLowerCase()===car.make.toLowerCase();
+  const modelCorrect=gModel.toLowerCase()===car.model.toLowerCase()||gModel.toLowerCase().replace(/[-\s]/g,'')===car.model.toLowerCase().replace(/[-\s]/g,'');
+  const yearCorrect=gYear===car.year;
+  const trimCorrect=gTrim.toLowerCase()===car.trim.toLowerCase();
+
+  let pts=0;
+  if(makeCorrect) pts+=25;
+  if(modelCorrect) pts+=30;
+  if(yearCorrect) pts+=20;
+  if(trimCorrect) pts+=15;
+  // Perfect bonus
+  const perfect=makeCorrect&&modelCorrect&&yearCorrect&&trimCorrect;
+  if(perfect) pts+=10;
+  // Hint penalty
+  pts=Math.max(0,pts-state.hintsUsed*5);
+  // Blitz time bonus
+  if(state.mode==='blitz'&&state.timeLeft>0) pts+=Math.round(state.timeLeft);
+
+  state.score+=pts;
+  if(makeCorrect&&modelCorrect) {state.streak++;state.correctCount++;}
+  else state.streak=0;
+  if(state.streak>state.bestStreak) state.bestStreak=state.streak;
+  if(perfect) state.perfectCount++;
+
+  state.results.push({car,pts,makeCorrect,modelCorrect,yearCorrect,trimCorrect,perfect,gMake,gModel,gYear,gTrim});
+
+  showResult(car,pts,makeCorrect,modelCorrect,yearCorrect,trimCorrect,perfect);
+}
+
+function skipRound(){
+  if(state.timer) clearInterval(state.timer);
+  const car=state.cars[state.round];
+  state.streak=0;
+  state.results.push({car,pts:0,makeCorrect:false,modelCorrect:false,yearCorrect:false,trimCorrect:false,perfect:false,gMake:'—',gModel:'—',gYear:'—',gTrim:'—'});
+  showResult(car,0,false,false,false,false,false);
+}
+
+// ============== SHOW RESULT ==============
+function showResult(car,pts,mc,moc,yc,tc,perfect){
+  const overlay=document.getElementById('result-overlay');
+  overlay.classList.remove('hidden');
+  const anyCorrect=mc||moc||yc;
+  document.getElementById('result-title').textContent=perfect?'🎯 Perfect ID!':anyCorrect?'Nice Spot!':'Better Luck Next Time';
+  document.getElementById('result-pts').textContent='+'+pts+' pts';
+
+  const detail=document.getElementById('result-detail');
+  detail.innerHTML=[
+    row('Make',car.make,mc),row('Model',car.model,moc),row('Year',car.year,yc),row('Trim',car.trim,tc)
+  ].join('');
+
+  function row(label,answer,correct){
+    return `<div class="row"><span class="label">${label}</span><span class="${correct?'correct':'wrong'}">${correct?'✓':'✗'} ${answer}</span></div>`;
+  }
+
+  document.getElementById('current-score').textContent=state.score;
+  updateStreak();
+
+  if(state.round>=state.totalRounds-1){
+    document.querySelector('.btn-next').textContent='See Results →';
+  } else {
+    document.querySelector('.btn-next').textContent='Next Car →';
+  }
+}
+
+function updateStreak(){
+  const el=document.getElementById('streak-display');
+  if(state.streak>=2){el.classList.remove('hidden');document.getElementById('streak-count').textContent=state.streak;}
+  else el.classList.add('hidden');
+}
+
+// ============== NEXT ROUND ==============
+function nextRound(){
+  document.getElementById('result-overlay').classList.add('hidden');
+  state.round++;
+  if(state.round>=state.totalRounds){showGameOver();return;}
+  loadRound();
+}
+
+// ============== GAME OVER ==============
+function showGameOver(){
+  document.getElementById('game-active').classList.add('hidden');
+  document.getElementById('game-over').classList.remove('hidden');
+  document.getElementById('final-score').textContent=state.score;
+  document.getElementById('stat-correct').textContent=state.correctCount+'/'+state.totalRounds;
+  document.getElementById('stat-streak').textContent=state.bestStreak;
+  document.getElementById('stat-perfect').textContent=state.perfectCount;
+
+  const bd=document.getElementById('breakdown');
+  bd.innerHTML='<h4>Round Breakdown</h4>'+state.results.map((r,i)=>
+    `<div class="breakdown-item"><span class="car-name">${i+1}. ${r.car.make} ${r.car.model}</span><span class="pts-earned">+${r.pts}</span></div>`
+  ).join('');
+
+  // Pre-fill name
+  const saved=localStorage.getItem('spotthat_name');
+  if(saved) document.getElementById('player-name').value=saved;
+}
+
+// ============== SAVE SCORE ==============
+function saveScore(){
+  const name=document.getElementById('player-name').value.trim()||'Anonymous';
+  localStorage.setItem('spotthat_name',name);
+  const key='spotthat_lb_'+state.mode;
+  const lb=JSON.parse(localStorage.getItem(key)||'[]');
+  lb.push({name,score:state.score,date:new Date().toISOString().split('T')[0],rounds:state.totalRounds,correct:state.correctCount,perfect:state.perfectCount});
+  lb.sort((a,b)=>b.score-a.score);
+  if(lb.length>50) lb.length=50;
+  localStorage.setItem(key,JSON.stringify(lb));
+  switchTab('leaderboard');
+  renderLeaderboard(state.mode);
+}
+
+// ============== LEADERBOARD ==============
+function renderLeaderboard(mode){
+  const key='spotthat_lb_'+mode;
+  const lb=JSON.parse(localStorage.getItem(key)||'[]');
+  const list=document.getElementById('lb-list');
+  if(!lb.length){list.innerHTML='<div class="lb-empty">No scores yet. Play a game!</div>';return;}
+  list.innerHTML=lb.slice(0,20).map((e,i)=>{
+    const cls=i===0?'gold':i===1?'silver':i===2?'bronze':'';
+    const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
+    return `<div class="lb-row ${cls}"><span class="lb-rank">${medal}</span><span class="lb-name">${esc(e.name)}</span><span class="lb-score">${e.score} pts</span></div>`;
+  }).join('');
+}
+function showLB(mode,btn){
+  btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLeaderboard(mode);
+}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+// ============== AUTOCOMPLETE ==============
+function setupAC(inputId,listId,options){
+  const input=document.getElementById(inputId);
+  const list=document.getElementById(listId);
+  let highlighted=-1;
+
+  input.addEventListener('input',()=>{
+    const v=input.value.toLowerCase();
+    if(!v){list.classList.remove('show');return;}
+    const matches=options.filter(o=>o.toLowerCase().includes(v)).slice(0,8);
+    if(!matches.length){list.classList.remove('show');return;}
+    highlighted=-1;
+    list.innerHTML=matches.map(m=>`<div class="autocomplete-item">${m}</div>`).join('');
+    list.classList.add('show');
+    list.querySelectorAll('.autocomplete-item').forEach(item=>{
+      item.addEventListener('mousedown',e=>{e.preventDefault();input.value=item.textContent;list.classList.remove('show');});
+    });
+  });
+
+  input.addEventListener('keydown',e=>{
+    const items=list.querySelectorAll('.autocomplete-item');
+    if(!items.length) return;
+    if(e.key==='ArrowDown'){e.preventDefault();highlighted=Math.min(highlighted+1,items.length-1);updateHL(items);}
+    else if(e.key==='ArrowUp'){e.preventDefault();highlighted=Math.max(highlighted-1,0);updateHL(items);}
+    else if(e.key==='Enter'&&highlighted>=0){e.preventDefault();input.value=items[highlighted].textContent;list.classList.remove('show');}
+  });
+
+  input.addEventListener('blur',()=>setTimeout(()=>list.classList.remove('show'),150));
+
+  function updateHL(items){items.forEach((it,i)=>it.classList.toggle('highlighted',i===highlighted));}
+}
+
+setupAC('guess-make','ac-make',ALL_MAKES);
+setupAC('guess-model','ac-model',ALL_MODELS);
+setupAC('guess-trim','ac-trim',ALL_TRIMS);
+
+// ============== KEYBOARD SHORTCUT ==============
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!document.getElementById('result-overlay').classList.contains('hidden')){
+    nextRound();
+  }
+});
+
+// Init leaderboard
+renderLeaderboard('classic');
+</script>
+</body>
+</html>
