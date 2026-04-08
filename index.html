@@ -72,7 +72,9 @@ button{cursor:pointer;border:none;font-family:inherit;font-size:inherit;transiti
   border:1px solid var(--surface3);
   aspect-ratio:4/3;max-height:54vh;
 }
-.detail-wrap img{width:100%;height:100%;object-fit:cover;display:block}
+.detail-gradient{width:100%;height:100%;display:flex;align-items:flex-end;padding:14px}
+.detail-gradient-label{background:rgba(0,0,0,.55);backdrop-filter:blur(6px);border-radius:8px;padding:6px 12px;font-size:.75rem;line-height:1.4;color:#fff}
+.detail-gradient-label strong{display:block;font-size:.9rem;margin-bottom:1px}
 .detail-overlay{
   position:absolute;bottom:0;left:0;right:0;
   background:linear-gradient(to top,rgba(0,0,0,.88) 0%,rgba(0,0,0,.35) 55%,transparent 100%);
@@ -80,7 +82,7 @@ button{cursor:pointer;border:none;font-family:inherit;font-size:inherit;transiti
 }
 .detail-micro{font-size:.62rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.9px;margin-bottom:3px}
 .detail-name-lbl{font-size:.88rem;font-weight:600;color:var(--text2)}
-.img-err{display:none;align-items:center;justify-content:center;position:absolute;inset:0;color:var(--text3);flex-direction:column;gap:6px;font-size:.85rem;background:var(--surface)}
+.img-err{display:none!important}
 
 /* ── CHOICES ── */
 .choices-heading{font-size:.68rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:9px}
@@ -148,7 +150,8 @@ button{cursor:pointer;border:none;font-family:inherit;font-size:inherit;transiti
   overflow:hidden;border:2px solid var(--surface3);
   max-height:46vh;flex-shrink:0
 }
-.reveal-img-box img{width:100%;height:100%;object-fit:cover;display:block}
+.reveal-gradient{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+.reveal-gradient-cat{font-size:1.1rem;font-weight:700;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:1px}
 .reveal-cap{text-align:center;margin-top:14px;max-width:500px}
 .reveal-what{font-size:.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px}
 .reveal-carname{font-size:1.3rem;font-weight:800;line-height:1.25}
@@ -279,10 +282,11 @@ button{cursor:pointer;border:none;font-family:inherit;font-size:inherit;transiti
       <div class="timer-fill" id="timer-fill" style="width:100%"></div>
     </div>
     <div class="detail-wrap">
-      <img id="detail-img" src="" alt="Car detail to identify">
-      <div class="img-err" id="img-err">📷 Loading photo…</div>
+      <div id="detail-gradient" class="detail-gradient">
+        <div class="detail-gradient-label" id="detail-gradient-label"></div>
+      </div>
       <div class="detail-overlay">
-        <div class="detail-micro">Spot the detail</div>
+        <div class="detail-micro">Spot the category</div>
         <div class="detail-name-lbl" id="detail-name-lbl"></div>
       </div>
     </div>
@@ -293,7 +297,9 @@ button{cursor:pointer;border:none;font-family:inherit;font-size:inherit;transiti
   <!-- Reveal overlay -->
   <div class="reveal-overlay hidden" id="reveal-overlay" onclick="dismissReveal()">
     <div class="reveal-img-box">
-      <img id="reveal-img" src="" alt="Full car reveal">
+      <div id="reveal-gradient" class="reveal-gradient">
+        <div class="reveal-gradient-cat" id="reveal-gradient-cat"></div>
+      </div>
     </div>
     <div class="reveal-cap">
       <div class="reveal-what" id="reveal-what"></div>
@@ -350,161 +356,48 @@ button{cursor:pointer;border:none;font-family:inherit;font-size:inherit;transiti
 // ============================================================
 // 30-CAR DATABASE
 // Each car has a zoomed-in detail image + full reveal image.
-// detailImg  → source.unsplash.com query for a close-up shot
-// fullImg    → specific Unsplash photo ID for the full reveal
+// Gradient palettes by category — replaces all external image URLs
+const GRADIENTS = {
+  sports: {css:"linear-gradient(135deg,#c0392b 0%,#e74c3c 30%,#e67e22 70%,#f39c12 100%)",label:"Sports Car"},
+  muscle: {css:"linear-gradient(135deg,#7d3c0a 0%,#e67e22 40%,#d4ac0d 80%,#f0c040 100%)",label:"Muscle Car"},
+  exotic: {css:"linear-gradient(135deg,#6c3483 0%,#9b59b6 35%,#e91e8c 70%,#f06292 100%)",label:"Exotic Supercar"},
+  suv:    {css:"linear-gradient(135deg,#145a32 0%,#27ae60 40%,#1abc9c 75%,#48c9b0 100%)",label:"SUV / Off-Roader"},
+  ev:     {css:"linear-gradient(135deg,#1a5276 0%,#2980b9 35%,#00bcd4 70%,#80deea 100%)",label:"Electric Vehicle"},
+};
 // detail     → describes which part of the car is shown
 // category   → used to pick plausible wrong answers (same class)
 // ============================================================
 const CARS = [
-  {make:"Toyota",    model:"Supra",        year:"2021",trim:"GR",
-   category:"sports",   detail:"Quad exhaust pipes",
-   detailImg:"https://source.unsplash.com/featured/?car,exhaust,pipes,sports,closeup",
-   fullImg:"https://images.unsplash.com/photo-1611651338412-8403fa6e3599?w=800&q=80"},
-
-  {make:"Ford",      model:"Mustang",      year:"2019",trim:"GT",
-   category:"muscle",   detail:"Triple-bar headlight",
-   detailImg:"https://source.unsplash.com/featured/?mustang,headlight,triple,bar,closeup",
-   fullImg:"https://images.unsplash.com/photo-1584345604476-8ec5f82d661f?w=800&q=80"},
-
-  {make:"Porsche",   model:"911",          year:"2019",trim:"Carrera",
-   category:"sports",   detail:"Center-lock wheel design",
-   detailImg:"https://source.unsplash.com/featured/?porsche,wheel,rim,centerlock,closeup",
-   fullImg:"https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=80"},
-
-  {make:"Tesla",     model:"Model 3",      year:"2022",trim:"Long Range",
-   category:"ev",       detail:"Minimalist interior screen",
-   detailImg:"https://source.unsplash.com/featured/?tesla,interior,screen,dashboard,closeup",
-   fullImg:"https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=800&q=80"},
-
-  {make:"BMW",       model:"M3",           year:"2022",trim:"Competition",
-   category:"sports",   detail:"Wide kidney grille",
-   detailImg:"https://source.unsplash.com/featured/?bmw,grille,kidney,large,closeup",
-   fullImg:"https://images.unsplash.com/photo-1617531653332-bd46c24f2068?w=800&q=80"},
-
-  {make:"Chevrolet", model:"Corvette",     year:"2022",trim:"Stingray",
-   category:"muscle",   detail:"Stacked tail light cluster",
-   detailImg:"https://source.unsplash.com/featured/?corvette,taillight,stacked,closeup",
-   fullImg:"https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&q=80"},
-
-  {make:"Mercedes-Benz",model:"G-Class",  year:"2019",trim:"G550",
-   category:"suv",      detail:"Exposed exterior door hinge",
-   detailImg:"https://source.unsplash.com/featured/?suv,door,hinge,exterior,closeup",
-   fullImg:"https://images.unsplash.com/photo-1520031441872-265e4ff70366?w=800&q=80"},
-
-  {make:"Lamborghini",model:"Huracán",     year:"2019",trim:"EVO",
-   category:"exotic",   detail:"Angular side air intake",
-   detailImg:"https://source.unsplash.com/featured/?lamborghini,intake,vent,side,closeup",
-   fullImg:"https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80"},
-
-  {make:"Jeep",      model:"Wrangler",     year:"2019",trim:"Rubicon",
-   category:"suv",      detail:"Seven-slot iconic grille",
-   detailImg:"https://source.unsplash.com/featured/?jeep,grille,seven,slot,offroad,closeup",
-   fullImg:"https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800&q=80"},
-
-  {make:"Audi",      model:"R8",           year:"2019",trim:"V10",
-   category:"sports",   detail:"Carbon fiber sideblade",
-   detailImg:"https://source.unsplash.com/featured/?audi,carbon,sideblade,detail,closeup",
-   fullImg:"https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?w=800&q=80"},
-
-  {make:"Honda",     model:"Civic",        year:"2022",trim:"Type R",
-   category:"sports",   detail:"Center triple exhaust",
-   detailImg:"https://source.unsplash.com/featured/?honda,civic,triple,exhaust,rear,closeup",
-   fullImg:"https://images.unsplash.com/photo-1679239872629-c1b6e88e3c6c?w=800&q=80"},
-
-  {make:"Land Rover",model:"Defender",     year:"2022",trim:"110",
-   category:"suv",      detail:"Alpine rear quarter window",
-   detailImg:"https://source.unsplash.com/featured/?defender,landrover,window,quarter,closeup",
-   fullImg:"https://images.unsplash.com/photo-1606016159991-dfe4f2746ad5?w=800&q=80"},
-
-  {make:"Dodge",     model:"Challenger",   year:"2019",trim:"Hellcat",
-   category:"muscle",   detail:"Hellcat hood intake scoop",
-   detailImg:"https://source.unsplash.com/featured/?dodge,challenger,hood,scoop,muscle,closeup",
-   fullImg:"https://images.unsplash.com/photo-1612544448445-b8232cff3b6c?w=800&q=80"},
-
-  {make:"Mazda",     model:"MX-5 Miata",  year:"2019",trim:"RF",
-   category:"sports",   detail:"Retractable hardtop panel",
-   detailImg:"https://source.unsplash.com/featured/?mazda,miata,roadster,hardtop,roof,closeup",
-   fullImg:"https://images.unsplash.com/photo-1555215695-3004980ad54e?w=800&q=80"},
-
-  {make:"Volkswagen",model:"Golf",         year:"2022",trim:"GTI",
-   category:"sports",   detail:"Red GTI brake caliper",
-   detailImg:"https://source.unsplash.com/featured/?vw,golf,brake,caliper,red,closeup",
-   fullImg:"https://images.unsplash.com/photo-1619405399517-d7fce0f13302?w=800&q=80"},
-
-  {make:"Ferrari",   model:"488",          year:"2019",trim:"GTB",
-   category:"exotic",   detail:"Prancing horse fender badge",
-   detailImg:"https://source.unsplash.com/featured/?ferrari,horse,badge,prancing,closeup",
-   fullImg:"https://images.unsplash.com/photo-1592198084033-aade902d1aae?w=800&q=80"},
-
-  {make:"Subaru",    model:"WRX",          year:"2022",trim:"STI",
-   category:"sports",   detail:"Hood scoop air inlet",
-   detailImg:"https://source.unsplash.com/featured/?subaru,wrx,hood,scoop,rally,inlet,closeup",
-   fullImg:"https://images.unsplash.com/photo-1626668893632-6f3a4466d22f?w=800&q=80"},
-
-  {make:"McLaren",   model:"720S",         year:"2019",trim:"Performance",
-   category:"exotic",   detail:"Eye-socket headlight shell",
-   detailImg:"https://source.unsplash.com/featured/?mclaren,headlight,eye,socket,supercar,closeup",
-   fullImg:"https://images.unsplash.com/photo-1621135802920-133df287f89c?w=800&q=80"},
-
-  {make:"Toyota",    model:"Land Cruiser", year:"2022",trim:"300 Series",
-   category:"suv",      detail:"LED daytime running strip",
-   detailImg:"https://source.unsplash.com/featured/?suv,led,daytime,running,light,strip,closeup",
-   fullImg:"https://images.unsplash.com/photo-1594611396730-61e126b0f37e?w=800&q=80"},
-
-  {make:"Nissan",    model:"GT-R",         year:"2019",trim:"NISMO",
-   category:"sports",   detail:"NISMO red-stitched steering wheel",
-   detailImg:"https://source.unsplash.com/featured/?nismo,steering,wheel,red,interior,closeup",
-   fullImg:"https://images.unsplash.com/photo-1580274455191-1c62238ce452?w=800&q=80"},
-
-  {make:"Ford",      model:"Bronco",       year:"2022",trim:"Wildtrak",
-   category:"suv",      detail:"Round Bronco headlight pod",
-   detailImg:"https://source.unsplash.com/featured/?bronco,ford,round,headlight,pod,closeup",
-   fullImg:"https://images.unsplash.com/photo-1662832789693-77666fef1d4f?w=800&q=80"},
-
-  {make:"Chevrolet", model:"Camaro",       year:"2019",trim:"ZL1",
-   category:"muscle",   detail:"ZL1 hood vent scoop",
-   detailImg:"https://source.unsplash.com/featured/?camaro,chevrolet,hood,vent,muscle,closeup",
-   fullImg:"https://images.unsplash.com/photo-1603553329474-99f95f35ea37?w=800&q=80"},
-
-  {make:"Aston Martin",model:"Vantage",   year:"2019",trim:"V8",
-   category:"sports",   detail:"Wide front chin splitter",
-   detailImg:"https://source.unsplash.com/featured/?aston,martin,front,chin,splitter,closeup",
-   fullImg:"https://images.unsplash.com/photo-1596468138838-0f34c4e0fbb6?w=800&q=80"},
-
-  {make:"Rivian",    model:"R1T",          year:"2022",trim:"Adventure",
-   category:"ev",       detail:"Gear tunnel cargo pass-through",
-   detailImg:"https://source.unsplash.com/featured/?electric,truck,cargo,tunnel,detail,closeup",
-   fullImg:"https://images.unsplash.com/photo-1675443435801-dd29e5e2a487?w=800&q=80"},
-
-  {make:"Hyundai",   model:"Ioniq 5",      year:"2022",trim:"Limited",
-   category:"ev",       detail:"Pixel LED light signature",
-   detailImg:"https://source.unsplash.com/featured/?hyundai,ioniq,pixel,led,light,closeup",
-   fullImg:"https://images.unsplash.com/photo-1670361725880-f5e819d25ddb?w=800&q=80"},
-
-  {make:"BMW",       model:"M4",           year:"2022",trim:"Competition",
-   category:"sports",   detail:"Tall vertical kidney grille",
-   detailImg:"https://source.unsplash.com/featured/?bmw,m4,grille,vertical,tall,closeup",
-   fullImg:"https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=800&q=80"},
-
-  {make:"Porsche",   model:"Taycan",       year:"2022",trim:"Turbo S",
-   category:"ev",       detail:"Four-point tail light signature",
-   detailImg:"https://source.unsplash.com/featured/?porsche,taycan,taillight,four,point,closeup",
-   fullImg:"https://images.unsplash.com/photo-1614200187524-dc4b892acf16?w=800&q=80"},
-
-  {make:"Toyota",    model:"GR86",         year:"2022",trim:"Premium",
-   category:"sports",   detail:"GR wing rear spoiler",
-   detailImg:"https://source.unsplash.com/featured/?toyota,gr86,wing,spoiler,rear,closeup",
-   fullImg:"https://images.unsplash.com/photo-1669725083498-4f9e6316e490?w=800&q=80"},
-
-  {make:"Mercedes-Benz",model:"AMG GT",   year:"2019",trim:"S",
-   category:"sports",   detail:"Long hood power dome",
-   detailImg:"https://source.unsplash.com/featured/?mercedes,amg,hood,power,dome,closeup",
-   fullImg:"https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=800&q=80"},
-
-  {make:"Ford",      model:"F-150",        year:"2022",trim:"Raptor",
-   category:"suv",      detail:"RAPTOR grille letter inserts",
-   detailImg:"https://source.unsplash.com/featured/?ford,raptor,grille,letters,truck,closeup",
-   fullImg:"https://images.unsplash.com/photo-1605893477799-b99e3b8b93fe?w=800&q=80"},
+  {make:"Toyota",model:"Supra",year:"2021-2026",trim:"GR",detail:"Inline-6 turbo intake",gradient:GRADIENTS.sports,choices:["Toyota Supra","Nissan GT-R","BMW M4","Porsche 718"]},
+  {make:"Ford",model:"Mustang",year:"2016-2020",trim:"GT",detail:"Tri-bar LED headlight",gradient:GRADIENTS.muscle,choices:["Ford Mustang","Dodge Challenger","Chevrolet Camaro","Ford F-150"]},
+  {make:"Porsche",model:"911",year:"2016-2020",trim:"Carrera",detail:"Center-lock wheel",gradient:GRADIENTS.sports,choices:["Porsche 911","Audi R8","BMW M3","Mercedes AMG GT"]},
+  {make:"Tesla",model:"Model 3",year:"2021-2026",trim:"Long Range",detail:"Minimalist touchscreen",gradient:GRADIENTS.ev,choices:["Tesla Model 3","Hyundai Ioniq 5","Porsche Taycan","Rivian R1T"]},
+  {make:"BMW",model:"M3",year:"2021-2026",trim:"Competition",detail:"Large kidney grille",gradient:GRADIENTS.sports,choices:["BMW M3","Audi RS6","Mercedes C63","Porsche Panamera"]},
+  {make:"Chevrolet",model:"Corvette",year:"2021-2026",trim:"Stingray",detail:"Stacked quad taillights",gradient:GRADIENTS.sports,choices:["Chevrolet Corvette","Dodge Viper","Ford GT","Acura NSX"]},
+  {make:"Mercedes-Benz",model:"G-Class",year:"2016-2020",trim:"G550",detail:"Exposed door hinges",gradient:GRADIENTS.suv,choices:["Mercedes G-Class","Jeep Wrangler","Land Rover Defender","Ford Bronco"]},
+  {make:"Lamborghini",model:"Huracán",year:"2016-2020",trim:"EVO",detail:"Side air intake vents",gradient:GRADIENTS.exotic,choices:["Lamborghini Huracán","Ferrari 488","McLaren 720S","Aston Martin Vantage"]},
+  {make:"Jeep",model:"Wrangler",year:"2016-2020",trim:"Rubicon",detail:"Seven-slot grille",gradient:GRADIENTS.suv,choices:["Jeep Wrangler","Ford Bronco","Land Rover Defender","Mercedes G-Class"]},
+  {make:"Audi",model:"R8",year:"2016-2020",trim:"V10",detail:"Carbon sideblade trim",gradient:GRADIENTS.exotic,choices:["Audi R8","Lamborghini Huracán","Porsche 911","BMW M8"]},
+  {make:"Honda",model:"Civic",year:"2021-2026",trim:"Type R",detail:"Triple-exit exhaust",gradient:GRADIENTS.sports,choices:["Honda Civic Type R","Volkswagen Golf GTI","Subaru WRX STI","Ford Focus RS"]},
+  {make:"Land Rover",model:"Defender",year:"2021-2026",trim:"110",detail:"Alpine rear quarter window",gradient:GRADIENTS.suv,choices:["Land Rover Defender","Jeep Wrangler","Ford Bronco","Toyota Land Cruiser"]},
+  {make:"Dodge",model:"Challenger",year:"2016-2020",trim:"Hellcat",detail:"Hood scoop & SRT badge",gradient:GRADIENTS.muscle,choices:["Dodge Challenger","Ford Mustang","Chevrolet Camaro","Pontiac GTO"]},
+  {make:"Mazda",model:"MX-5 Miata",year:"2016-2020",trim:"RF",detail:"Retractable fastback roof",gradient:GRADIENTS.sports,choices:["Mazda MX-5 Miata","Porsche Boxster","BMW Z4","Toyota GR86"]},
+  {make:"Volkswagen",model:"Golf",year:"2021-2026",trim:"GTI",detail:"Red brake caliper & plaid",gradient:GRADIENTS.sports,choices:["Volkswagen Golf GTI","Honda Civic Type R","Hyundai Elantra N","Toyota GR Corolla"]},
+  {make:"Ferrari",model:"488",year:"2016-2020",trim:"GTB",detail:"Prancing horse badge",gradient:GRADIENTS.exotic,choices:["Ferrari 488","Lamborghini Huracán","McLaren 720S","Aston Martin DB11"]},
+  {make:"Subaru",model:"WRX",year:"2021-2026",trim:"STI",detail:"Hood scoop & rally intake",gradient:GRADIENTS.sports,choices:["Subaru WRX STI","Mitsubishi Lancer EVO","Honda Civic Type R","Volkswagen Golf R"]},
+  {make:"McLaren",model:"720S",year:"2016-2020",trim:"Performance",detail:"Eye-socket LED headlight",gradient:GRADIENTS.exotic,choices:["McLaren 720S","Ferrari 488","Lamborghini Huracán","Porsche 911 GT3"]},
+  {make:"Toyota",model:"Land Cruiser",year:"2021-2026",trim:"300 Series",detail:"LED daytime running strip",gradient:GRADIENTS.suv,choices:["Toyota Land Cruiser","Land Rover Defender","Lexus LX","Mercedes G-Class"]},
+  {make:"Nissan",model:"GT-R",year:"2016-2020",trim:"NISMO",detail:"NISMO steering wheel",gradient:GRADIENTS.sports,choices:["Nissan GT-R","Toyota Supra","Porsche 911","BMW M4"]},
+  {make:"Ford",model:"Bronco",year:"2021-2026",trim:"Wildtrak",detail:"Round auxiliary light pod",gradient:GRADIENTS.suv,choices:["Ford Bronco","Jeep Wrangler","Land Rover Defender","Mercedes G-Class"]},
+  {make:"Chevrolet",model:"Camaro",year:"2016-2020",trim:"ZL1",detail:"Hood vent & power dome",gradient:GRADIENTS.muscle,choices:["Chevrolet Camaro","Ford Mustang","Dodge Challenger","Dodge Charger"]},
+  {make:"Aston Martin",model:"Vantage",year:"2016-2020",trim:"V8",detail:"Chin splitter & grille",gradient:GRADIENTS.exotic,choices:["Aston Martin Vantage","Jaguar F-Type","Ferrari 488","McLaren 720S"]},
+  {make:"Rivian",model:"R1T",year:"2021-2026",trim:"Adventure",detail:"Gear tunnel storage",gradient:GRADIENTS.ev,choices:["Rivian R1T","Ford F-150 Lightning","GMC Hummer EV","Tesla Cybertruck"]},
+  {make:"Hyundai",model:"Ioniq 5",year:"2021-2026",trim:"Limited",detail:"Pixel LED light bar",gradient:GRADIENTS.ev,choices:["Hyundai Ioniq 5","Kia EV6","Tesla Model Y","Volkswagen ID.4"]},
+  {make:"BMW",model:"M4",year:"2021-2026",trim:"Competition",detail:"Tall vertical kidney grille",gradient:GRADIENTS.sports,choices:["BMW M4","Audi RS5","Mercedes C63","Alfa Romeo Giulia QV"]},
+  {make:"Porsche",model:"Taycan",year:"2021-2026",trim:"Turbo S",detail:"Four-point taillight",gradient:GRADIENTS.ev,choices:["Porsche Taycan","Tesla Model S","Audi e-tron GT","Mercedes EQS"]},
+  {make:"Toyota",model:"GR86",year:"2021-2026",trim:"Premium",detail:"Rear lip spoiler & wing",gradient:GRADIENTS.sports,choices:["Toyota GR86","Mazda MX-5 Miata","Subaru BRZ","Honda Civic Type R"]},
+  {make:"Mercedes-Benz",model:"AMG GT",year:"2016-2020",trim:"S",detail:"Power dome hood",gradient:GRADIENTS.sports,choices:["Mercedes AMG GT","Porsche 911","Aston Martin Vantage","Jaguar F-Type"]},
+  {make:"Ford",model:"F-150",year:"2021-2026",trim:"Raptor",detail:"FORD grille letter badge",gradient:GRADIENTS.suv,choices:["Ford F-150 Raptor","Ram 1500 TRX","Chevy Silverado Trail Boss","GMC Sierra AT4"]},
 ];
 
 // ============================================================
@@ -609,15 +502,12 @@ function loadQuestion() {
   const pct = ((state.totalRounds - state.round) / state.totalRounds) * 100;
   document.getElementById('progress-fill').style.width = pct + '%';
 
-  // Detail image
-  const img = document.getElementById('detail-img');
-  const err = document.getElementById('img-err');
-  img.style.display = 'block';
-  err.style.display = 'none';
-  img.onerror = () => { img.style.display = 'none'; err.style.display = 'flex'; };
-  img.src = car.detailImg;
-
-  document.getElementById('detail-name-lbl').textContent = car.detail;
+  // Detail gradient
+  const detailGrad = document.getElementById('detail-gradient');
+  detailGrad.style.background = car.gradient.css;
+  document.getElementById('detail-gradient-label').innerHTML =
+    `<strong>${car.gradient.label}</strong>${car.detail}`;
+  document.getElementById('detail-name-lbl').textContent = car.gradient.label;
 
   // Score + streak UI
   document.getElementById('current-score').textContent = state.score;
@@ -649,23 +539,9 @@ function loadQuestion() {
 // ============================================================
 function generateOptions(correctCar) {
   const correctLbl = carLabel(correctCar);
-  const seen = new Set([correctLbl]);
-  const wrong = [];
-
-  const sameCategory = shuffle(CARS.filter(c =>
-    c.category === correctCar.category && carLabel(c) !== correctLbl));
-  for (const c of sameCategory) {
-    const lbl = carLabel(c);
-    if (!seen.has(lbl) && wrong.length < 3) { seen.add(lbl); wrong.push(lbl); }
-  }
-
-  const rest = shuffle(CARS);
-  for (const c of rest) {
-    const lbl = carLabel(c);
-    if (!seen.has(lbl) && wrong.length < 7) { seen.add(lbl); wrong.push(lbl); }
-  }
-
-  return shuffle([correctLbl, ...wrong]);
+  // Use the curated choices list, keeping only the 3 wrong options (not the correct one in case it appears)
+  const curated = correctCar.choices.filter(lbl => lbl !== correctLbl).slice(0, 3);
+  return shuffle([correctLbl, ...curated]);
 }
 
 // ============================================================
@@ -754,10 +630,9 @@ let _revealDone = false;
 function showReveal(car, isCorrect) {
   _revealDone = false;
 
-  const img = document.getElementById('reveal-img');
-  img.style.display = 'block';
-  img.onerror = () => { img.style.display = 'none'; };
-  img.src = car.fullImg;
+  const revealGrad = document.getElementById('reveal-gradient');
+  revealGrad.style.background = car.gradient.css;
+  document.getElementById('reveal-gradient-cat').textContent = car.gradient.label;
 
   document.getElementById('reveal-what').textContent =
     'You were looking at: ' + car.detail;
